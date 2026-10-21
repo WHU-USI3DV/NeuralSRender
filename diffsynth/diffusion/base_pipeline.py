@@ -212,6 +212,15 @@ class BasePipeline(torch.nn.Module):
                 continue
             module.train()
             module.requires_grad_(True)
+
+    def activate_module(self, model_names):
+        for name in model_names:
+            module = self.get_module(self, name)
+            if module is None:
+                print(f"No {name} models in the pipeline. We cannot enable training on the model. If this occurs during the data processing stage, it is normal.")
+                continue
+            module.train()
+            module.requires_grad_(True)
                 
     
     def blend_with_mask(self, base, addition, mask):

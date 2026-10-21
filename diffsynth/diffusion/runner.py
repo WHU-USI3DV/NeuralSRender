@@ -2,9 +2,15 @@ import os, json, torch, importlib
 from tqdm import tqdm
 from accelerate import Accelerator
 from .training_module import DiffusionTrainingModule
-from .logger import ModelLogger
+from .logger import ModelLogger, TensorboardLogger
 from diffsynth.core import OffloadTrainingManager
 
+def safe_collate_fn(batch):
+    try:
+        return batch[0]
+    except Exception as e:
+        print(f"Error in collate_fn: {e}. Skipping this batch.")
+        return None 
 
 def get_optimizer_class(customized_optimizer=None):
     if customized_optimizer is None:
@@ -166,3 +172,83 @@ def initialize_deepspeed_gradient_checkpointing(accelerator: Accelerator):
             )
         else:
             print("Do not find activation_checkpointing config in deepspeed config, skip initializing deepspeed gradient checkpointing.")
+
+
+def launch_training_task_with_tensorboard(
+    accelerator: Accelerator,
+    dataset: torch.utils.data.Dataset,
+    model: DiffusionTrainingModule,
+    model_logger: TensorboardLogger,
+    learning_rate: float = 1e-5,
+    weight_decay: float = 1e-2,
+    num_workers: int = 1,
+    save_steps: int = None,
+    num_epochs: int = 1,
+    args = None,
+):
+    if args is not None:
+        learning_rate = args.learning_rate
+        weight_decay = args.weight_decay
+        num_workers = args.dataset_num_workers
+        save_steps = args.save_steps
+        num_epochs = args.num_epochs
+    
+    optimizer = torch.optim.AdamW(model.trainable_modules(), lr=learning_rate, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.ConstantLR(optimizer)
+    dataloader = torch.utils.data.DataLoader(dataset, shuffle=True, collate_fn=safe_collate_fn, num_workers=num_workers)
+    
+    model, optimizer, dataloader, scheduler = accelerator.prepare(model, optimizer, dataloader, scheduler)
+
+    lr_info = f"[Info] lr={learning_rate}"
+        # -----------------------------
+    # print debug info (main process only)
+    # -----------------------------
+    if accelerator.is_main_process:
+        print("\n========== Training Config ==========")
+        print(lr_info)
+        print(f"[Info] weight_decay = {weight_decay}")
+        print(f"[Info] num_epochs = {num_epochs}")
+        print(f"[Info] num_workers = {num_workers}")
+        print("")
+
+        print("========== Optimizer Param Groups ==========")
+        for i, group in enumerate(optimizer.param_groups):
+            n_params = sum(p.numel() for p in group["params"])
+            name = group.get("name", f"group_{i}")
+            print(f"[{name}] lr={group['lr']:.2e}, params={n_params}")
+        print("===========================================\n")
+
+        total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        optimizer_params = sum(
+            p.numel() for g in optimizer.param_groups for p in g["params"]
+        )
+
+        print(f"[Check] total trainable params   = {total_params}")
+        print(f"[Check] optimizer covered params = {optimizer_params}")
+        assert total_params == optimizer_params, "❌ Missing parameters in optimizer!"
+    
+
+    for epoch_id in range(num_epochs):
+        for batch_idx, data in enumerate(tqdm(dataloader)):
+            try:
+                with accelerator.accumulate(model):
+                    optimizer.zero_grad()
+                    if dataset.load_from_cache:
+                        loss = model({}, inputs=data)
+                    else:
+                        loss = model(data)
+                    accelerator.backward(loss)
+                    optimizer.step()
+                    logs = {
+                        "Train/Loss": loss.detach().item(),  # detach 防止显存泄漏
+                        "Train/LR": optimizer.param_groups[0]['lr']
+                    }
+                    model_logger.on_step_end(accelerator, model, save_steps, logs)
+                    scheduler.step()
+            except (OSError, IOError) as e:
+                print(f"Batch {batch_idx} skipped due to IO error: {e}")
+                continue
+
+        if save_steps is None:
+            model_logger.on_epoch_end(accelerator, model, epoch_id)
+    model_logger.on_training_end(accelerator, model, save_steps)

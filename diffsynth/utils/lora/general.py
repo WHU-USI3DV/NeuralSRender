@@ -68,3 +68,55 @@ class GeneralLoRALoader:
                 module.load_state_dict(state_dict_base)
                 updated_num += 1
         print(f"{updated_num} tensors are fused by LoRA. Fused LoRA layers cannot be cleared by `pipe.clear_lora()`.")
+
+
+
+class LoRAWithPatchEmbeddingLoader(GeneralLoRALoader):
+    def convert_state_dict(self, state_dict, suffix=".weight"):
+        new_state_dict = super().convert_state_dict(state_dict, suffix)
+        
+        keys_to_preserve = ['patch_embedding.weight', 'patch_embedding.bias']
+        for key in keys_to_preserve:
+            if key in state_dict:
+                new_state_dict[key] = state_dict[key]
+        
+        return new_state_dict
+
+    def update_patch_embedding(self, model: torch.nn.Module, state_dict):
+
+        patch_embedding_updated = False
+        try:
+            model_modules = dict(model.named_modules())
+            module = model_modules.get('patch_embedding')
+            
+            if module is None:
+                return
+
+            with torch.no_grad():
+                if 'patch_embedding.weight' in state_dict:
+                    patch_weight_lora = state_dict['patch_embedding.weight'].to(self.device, self.torch_dtype)
+                    current_weight = module.weight.data
+                    lora_in_channels = patch_weight_lora.shape[1]
+                    
+                    if current_weight.shape[1] < lora_in_channels:
+                        print(f"Warning: Model's patch_embedding in_channels ({current_weight.shape[1]}) is smaller than LoRA's ({lora_in_channels}). Cannot load.")
+                    else:
+                        print(f"Updating the first {lora_in_channels} input channels of patch_embedding.weight.")
+                        current_weight[:, :lora_in_channels, :, :, :].copy_(patch_weight_lora)
+                        patch_embedding_updated = True
+
+                if 'patch_embedding.bias' in state_dict and module.bias is not None:
+                    patch_bias_lora = state_dict['patch_embedding.bias'].to(self.device, self.torch_dtype)
+                    module.bias.data.copy_(patch_bias_lora)
+                    patch_embedding_updated = True
+
+            if patch_embedding_updated:
+                print("Tensors 'patch_embedding.weight' and/or 'patch_embedding.bias' were updated partially.")
+
+        except Exception as e:
+            print(f"An error occurred while loading patch_embedding weights: {e}")
+
+    def fuse_lora_to_base_model(self, model: torch.nn.Module, state_dict, alpha=1.0):
+        super().fuse_lora_to_base_model(model, state_dict, alpha)
+        
+        self.update_patch_embedding(model, state_dict)

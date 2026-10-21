@@ -1,6 +1,6 @@
 import os, torch
 from accelerate import Accelerator
-
+from torch.utils.tensorboard import SummaryWriter
 
 class TensorBoardLogger:
     def __init__(self, log_dir):
@@ -14,6 +14,8 @@ class TensorBoardLogger:
     def close(self):
         if self.writer is not None:
             self.writer.close()
+
+
 
 
 class SwanLabLogger:
@@ -131,3 +133,54 @@ class ModelLogger:
             os.makedirs(self.output_path, exist_ok=True)
             path = os.path.join(self.output_path, file_name)
             accelerator.save(state_dict, path, safe_serialization=True)
+
+
+class TensorboardLogger(ModelLogger):
+    def __init__(self, output_path, log_steps=10, log_dir=None, remove_prefix_in_ckpt=None, state_dict_converter=lambda x: x):
+
+        super().__init__(output_path, remove_prefix_in_ckpt, state_dict_converter)
+        
+        # 仅在 output_path 设置好后初始化 writer
+        self.log_dir = log_dir if log_dir else os.path.join(output_path, "logs")
+        self.writer = None  # 延迟初始化，确保只在主进程开启
+        self.log_steps = log_steps
+
+    def _init_writer(self, accelerator: Accelerator):
+        if accelerator.is_main_process and self.writer is None:
+            os.makedirs(self.log_dir, exist_ok=True)
+            self.writer = SummaryWriter(self.log_dir)
+
+    def log_scalars(self, accelerator: Accelerator, scalars: dict, step=None):
+
+        self._init_writer(accelerator)
+        if accelerator.is_main_process:
+            current_step = step if step is not None else self.num_steps
+            for key, value in scalars.items():
+                if isinstance(value, torch.Tensor):
+                    value = value.item()
+                self.writer.add_scalar(key, value, current_step)
+
+    def log_video(self, accelerator: Accelerator, tag: str, video_tensor, step=None, fps=4):
+
+        self._init_writer(accelerator)
+        if accelerator.is_main_process:
+            current_step = step if step is not None else self.num_steps
+            
+            if video_tensor.min() < 0:
+                video_tensor = (video_tensor + 1.0) / 2.0
+            video_tensor = video_tensor.clamp(0, 1)
+            
+            if video_tensor.dim() == 4:
+                video_tensor = video_tensor.unsqueeze(0)
+
+            self.writer.add_video(tag, video_tensor, global_step=current_step, fps=fps)
+
+    def on_step_end(self, accelerator: Accelerator, model: torch.nn.Module, save_steps=None, logs: dict = None):
+        super().on_step_end(accelerator, model, save_steps)
+        
+        if logs is not None and self.num_steps % self.log_steps == 0:
+            self.log_scalars(accelerator, logs)
+
+    def close(self, accelerator: Accelerator):
+        if accelerator.is_main_process and self.writer:
+            self.writer.close()

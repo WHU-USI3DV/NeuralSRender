@@ -5,6 +5,7 @@ import urllib.request
 from io import BytesIO
 from PIL import Image
 from einops import repeat
+from safetensors.torch import load_file
 
 
 def _is_url(path):
@@ -75,6 +76,22 @@ class ToStr(DataProcessingOperator):
         if data is None: data = self.none_value
         return str(data)
 
+class LoadPrompt(DataProcessingOperator):
+    def __init__(self, base_path=""):
+        self.base_path = base_path
+        
+    def __call__(self, data):
+        with open(data, 'r', encoding="utf-8") as f:
+            content = f.read()
+        return content
+    
+class LoadPromptSafetensor(DataProcessingOperator):
+    def __init__(self, base_path=""):
+        self.base_path = base_path
+        
+    def __call__(self, data):
+        content = load_file(data)
+        return content["text_embedding"]
 
 class LoadImage(DataProcessingOperator):
     def __init__(self, convert_RGB=True, convert_RGBA=False, url_timeout=30, url_max_retries=3):

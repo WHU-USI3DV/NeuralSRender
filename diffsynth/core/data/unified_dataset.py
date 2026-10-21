@@ -24,7 +24,25 @@ class UnifiedDataset(torch.utils.data.Dataset):
         self.cached_data = []
         self.load_from_cache = metadata_path is None
         self.load_metadata(metadata_path)
+
+    @staticmethod
+    def default_prompt_operator(
+        base_path=""
+    ):
+        return RouteByType(operator_map=[
+            (str, ToAbsolutePath(base_path) >> LoadPrompt()),
+            (list, SequencialProcess(ToAbsolutePath(base_path) >> LoadPrompt())),
+        ])
     
+    @staticmethod
+    def safetensor_prompt_operator(
+        base_path=""
+    ):
+        return RouteByType(operator_map=[
+            (str, ToAbsolutePath(base_path) >> LoadPromptSafetensor()),
+            (list, SequencialProcess(ToAbsolutePath(base_path) >> LoadPromptSafetensor())),
+        ])
+
     @staticmethod
     def default_image_operator(
         base_path="",
