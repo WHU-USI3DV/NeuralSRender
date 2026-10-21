@@ -19,6 +19,19 @@ NeuralSRender introduces only **1.45% additional parameters** and can be trained
 
 
 
+https://github.com/user-attachments/assets/6204f1fa-d085-4dce-a01b-22572cb91b58
+
+
+
+https://github.com/user-attachments/assets/c07903ac-d929-41d8-a5bb-116c8f1d0cce
+
+
+
+https://github.com/user-attachments/assets/9a071682-dce5-417f-8f4c-37c8dff57ce6
+
+
+
+
 ## Model Checkpoints
 
 Checkpoint download links and usage instructions will be added here when available.
@@ -117,6 +130,15 @@ video,prompt,basecolor_video,depth_video,normal_video,metallic_video,roughness_v
 - **Frame count:** The number of frames must satisfy `4n + 1` for an integer `n` (e.g., 81 or 4017).
 - **Prompt embeddings:** We recommend precomputing text prompt embeddings and storing them in `.safetensors` format to reduce GPU memory usage during training.
 - **Long-video quality:** In our experiments, training with longer clips sometimes resulted in less vivid, visually flatter generations. We therefore recommend sliding-window inference for long videos.
+
+## GenReal Dataset
+
+
+
+https://github.com/user-attachments/assets/d9f70d09-7cbb-4396-bba6-f4a0990b0f0e
+
+
+
 
 ## Release Status
 
