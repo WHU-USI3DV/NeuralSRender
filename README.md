@@ -31,10 +31,16 @@ https://github.com/user-attachments/assets/9a071682-dce5-417f-8f4c-37c8dff57ce6
 
 
 
-
 ## Model Checkpoints
 
-Checkpoint download links and usage instructions will be added here when available.
+The pretrained NeuralSRender model weights are available on Hugging Face.
+
+You can download the checkpoints using the Hugging Face CLI:
+
+```shell
+hf download stardustlu/NeuralSRender \
+    --local-dir ./models/NeuralSRender
+```
 
 ## Quick Start
 
