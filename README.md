@@ -3,9 +3,13 @@
 This is the official PyTorch implementation of the following publication:
 
 > **NeuralSRender: G-Buffer Guided Video Diffusion for Sim-to-Real Rendering**
+> 
 > Yipeng Lu, Youqi Liao, Zhenyu Wang, Yuning Peng, Zhen Dong
+> 
 > *arXiv preprint, 2026*
+> 
 > [**Arxiv**](https://arxiv.org/abs/2610.29200) | [**Code**](https://github.com/WHU-USI3DV/NeuralSRender) | [**Model Weights**](https://huggingface.co/stardustlu/NeuralSRender)
+> 
 
 
 ![NeuralSRender teaser](assets/tesear.jpg)
