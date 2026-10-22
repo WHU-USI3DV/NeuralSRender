@@ -145,7 +145,7 @@ video,prompt,basecolor_video,depth_video,normal_video,metallic_video,roughness_v
 - **Optional G-buffer inputs:** Not all G-buffer attributes are required. Unused G-buffer inputs can be filled with zeros.
 - **Frame count:** The number of frames must satisfy `4n + 1` for an integer `n` (e.g., 81 or 4017).
 - **Prompt embeddings:** We recommend precomputing text prompt embeddings and storing them in `.safetensors` format to reduce GPU memory usage during training.
-- **Long-video quality:** In our experiments, training with longer clips sometimes resulted in less vivid, visually flatter generations. We therefore recommend sliding-window inference for long videos.
+- **Long-video quality:** In our experiments, infer with longer clips sometimes resulted in less vivid, visually flatter generations. We therefore recommend sliding-window inference for long videos.
 
 ## GenReal Dataset
 
