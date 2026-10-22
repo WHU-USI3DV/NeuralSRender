@@ -1,6 +1,14 @@
 # NeuralSRender: G-Buffer-Guided Video Diffusion for Sim-to-Real Rendering
 
-Official PyTorch implementation of **NeuralSRender**, a G-buffer-guided video diffusion framework for photorealistic sim-to-real rendering.
+This is the official PyTorch implementation of the following publication:
+
+> **NeuralSRender: G-Buffer Guided Video Diffusion for Sim-to-Real Rendering**
+>
+> Yipeng Lu, Youqi Liao, Zhenyu Wang, Yuning Peng, Zhen Dong
+>
+> *arXiv preprint, 2026*
+>
+> [**Arxiv**](https://arxiv.org/abs/2610.29200) | [**Code**](https://github.com/WHU-USI3DV/NeuralSRender) | [**Model Weights**](https://huggingface.co/stardustlu/NeuralSRender)
 
 ![NeuralSRender teaser](assets/tesear.jpg)
 
@@ -154,7 +162,17 @@ https://github.com/user-attachments/assets/d9f70d09-7cbb-4396-bba6-f4a0990b0f0e
 
 ## Citation
 
-Citation information will be added when available.
+If you find NeuralSRender useful for your research, please consider citing our paper:
+
+```bibtex
+@article{lu2026neuralsrender,
+  title={NeuralSRender: G-Buffer Guided Video Diffusion for Sim-to-Real Rendering},
+  author={Lu, Yipeng and Liao, Youqi and Wang, Zhenyu and Peng, Yuning and Dong, Zhen},
+  journal={arXiv preprint arXiv:2610.29200},
+  year={2026},
+  url={https://arxiv.org/abs/2610.29200}
+}
+```
 
 ## Acknowledgements
 
